@@ -50,12 +50,26 @@ valid_data$alkoholis_id <- factor(valid_data$alkoholis_id, levels = c("1", "2", 
 
 valid_data$rukymo_stazas_id <- factor(valid_data$rukymo_stazas_id, levels = c("0", "1", "2", "3", "4"))
 
-
+valid_data <- valid_data %>%
+  mutate(
+    paciento_lytis = str_trim(as.character(paciento_lytis)),
+    
+    # Map Lithuanian codes to English codes for later visualisation
+    paciento_lytis = case_when(
+      paciento_lytis == "M" ~ "F", # Moteris -> Female
+      paciento_lytis == "V" ~ "M", # Vyras -> Male
+      TRUE ~ NA_character_
+    ),
+    
+    #Convert to factor and set "F" as the reference baseline
+    paciento_lytis = factor(paciento_lytis, levels = c("F", "M"))
+  )
 
 # Inspect categories
 table(valid_data$rukymas_id, useNA = "ifany")
 table(valid_data$alkoholis_id, useNA = "ifany")
 table(valid_data$rukymo_stazas_id, useNA = "ifany")
+table(valid_data$paciento_lytis, useNA = "ifany")
 
 
 # -------------------- HANDLE MISSING VALUES --------------------
@@ -403,6 +417,44 @@ ggplot(
   labs(
     #title = str_wrap("Tuberculosis Mortality Proportion by ICD-10 TB Diagnosis Category", width = 45),
     x = "ICD-10 TB diagnosis category",
+    y = "Proportion",
+    fill = "Died from tuberculosis"
+  ) +
+  theme_minimal()
+
+#10. Distribution of genders
+ggplot(
+  data_with_unique_patient_entries,
+  aes(x = paciento_lytis)
+) +
+  geom_bar(fill = "darkblue") +
+  geom_text(
+    stat = "count", 
+    aes(label = after_stat(count)), 
+    vjust = -0.5,   
+    size = 3  
+  ) +
+  labs(
+    #title = str_wrap("Distribution of Patient genders", width = 45),
+    x = "Gender",
+    y = "Number of patients"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+
+#11.  Mortality proportion by gender
+
+ggplot(
+  data_with_unique_patient_entries %>%
+    filter(
+      !is.na(ar_mire_nuo_tub)
+    ),
+  aes(x = paciento_lytis, fill = ar_mire_nuo_tub)
+) +
+  geom_bar(position = "fill") +
+  labs(
+    #title = str_wrap("Tuberculosis Mortality Proportion accross patient genders", width = 45),
+    x = "Gender",
     y = "Proportion",
     fill = "Died from tuberculosis"
   ) +
